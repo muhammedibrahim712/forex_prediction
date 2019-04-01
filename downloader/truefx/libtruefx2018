@@ -1,0 +1,94 @@
+#! /bin/bash
+
+download() {
+    symbol=$1
+    startYear=$2
+    startMonth=$3
+    endYear=$4
+    endMonth=$5
+
+    months=("01" "02" "03" "04" "05" "06" "07" "08" "09" "10" "11" "12")
+    symbols=("AUDJPY" "AUDNZD" "AUDUSD" "CADJPY" "CHFJPY" "EURCHF" "EURGBP" "EURJPY" "EURUSD" "GBPJPY" "GBPUSD" "NZDUSD" "USDCAD" "USDCHF" "USDJPY")
+
+    if ! [[ " ${symbols[*]} " =~ " ${symbol} " ]]
+    then
+        echo "Use symbol from the following list:"
+        echo "${symbols[*]}"
+        exit 1
+    fi
+
+    if (( (startYear == endYear && startMonth > endMonth) || (startYear > endYear) ))
+    then
+        echo "Use valid dates in this order: startYear startMonth endYear endMonth"
+        exit 1
+    fi
+
+    if ((startMonth < 1 || startMonth > 12 || endMonth < 1 || endMonth > 12))
+    then
+        echo "Use valid month"
+        exit 1
+    fi
+
+    if ((startYear < 2009 || (startYear == 2009 && startMonth < 5) ))
+    then
+        echo "The first available date is May 2009"
+        exit 1
+    fi
+
+    wget -q --spider www.truefx.com
+    errorCode=$?
+    if ((errorCode != 0))
+    then
+        echo "TrueFX is down"
+        exit 1
+    fi
+
+    csv=$symbol-$startYear$(printf %02d $startMonth)-$endYear$(printf %02d $endMonth).csv
+    if [[ -f $csv ]]
+    then
+        rm $csv
+    fi
+
+    year=$startYear
+    month=$startMonth
+    while true
+    do
+        file=$symbol-$year-$(printf %02d $month)
+
+        url="http://www.truefx.com/dev/data/$year/$year-${months[$month-1]}/$file.zip"
+        if [[ ! -d $symbol-zip ]]
+        then
+            mkdir $symbol-zip
+        fi
+        wget --referer="http://www.truefx.com/?page=download" -c $url -O $symbol-zip/$file.zip
+
+        zip=$symbol-zip/$file.zip
+        type=`file -b $zip`
+        if ! [[ $type =~ "Zip archive data" ]]
+        then
+            echo "Downloaded file is not a zip"
+            echo "Maybe you tried to download unavailable data"
+            rm $zip
+            if [[ -f $csv ]]
+            then
+                rm $csv
+            fi
+            exit 1
+        fi
+
+        unzip $zip
+        cat $file.csv >> $csv
+        rm $file.csv
+
+        if ((year == endYear && month == endMonth))
+        then
+            break
+        fi
+        ((month++))
+        if ((month > 12))
+        then
+            ((year++))
+            ((month=1))
+        fi
+    done
+}

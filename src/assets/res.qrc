@@ -1,0 +1,14 @@
+<RCC>
+  <qresource prefix="assets">
+    <file>logo.png</file>
+    <file>calendar.png</file>
+    <file>down.png</file>
+    <file>gray.png</file>
+    <file>green.png</file>
+    <file>pdf.png</file>
+    <file>red.png</file>
+    <file>setting.png</file>
+    <file>txt.png</file>
+    <file>xls.png</file>
+  </qresource>
+</RCC>
